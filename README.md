@@ -1,11 +1,11 @@
-# Sprint1 API
+# 名簿管理API (Meibo API)
 
-Go言語で実装されたタスク管理APIサーバーです。
+Go言語で実装された名簿管理APIサーバーです。
 
 ## 技術スタック
 
 - Go 1.21+
-- MySQL
+- MySQL 8.0
 - gorilla/mux (ルーティング)
 - go-sql-driver/mysql (MySQLドライバ)
 - rs/cors (CORS対応)
@@ -14,34 +14,183 @@ Go言語で実装されたタスク管理APIサーバーです。
 
 | エンドポイント | メソッド | 説明 |
 |---------------|---------|------|
-| `/api/tasks` | GET | タスク一覧取得 |
-| `/api/tasks/{id}` | GET | タスク詳細取得 |
-| `/api/tasks` | POST | タスク作成 |
-| `/api/tasks/{id}` | PUT | タスク更新 |
-| `/api/tasks/{id}` | DELETE | タスク削除 |
+| `/` | GET | ヘルスチェック |
+| `/api/health` | GET | ヘルスチェック |
+| `/api/persons` | GET | 名簿一覧取得 |
+| `/api/persons/{id}` | GET | 名簿詳細取得 |
+| `/api/persons` | POST | 名簿登録 |
+| `/api/persons/{id}` | PUT | 名簿更新 |
+| `/api/persons/{id}` | DELETE | 名簿削除 |
+
+## ステータスコード一覧
+
+### GET `/` , `/api/health` - ヘルスチェック
+
+| ステータスコード | 説明 |
+|-----------------|------|
+| 200 OK | 正常動作中 |
+
+**レスポンス例:**
+```json
+{
+  "status": "ok",
+  "service": "meibo-api"
+}
+```
+
+### GET `/api/persons` - 名簿一覧取得
+
+| ステータスコード | 説明 |
+|-----------------|------|
+| 200 OK | 一覧取得成功 |
+| 500 Internal Server Error | データベースエラー |
+
+**成功レスポンス例 (200):**
+```json
+[
+  {
+    "id": 1,
+    "name": "山田太郎",
+    "email": "yamada@example.com",
+    "phone": "090-1234-5678"
+  },
+  {
+    "id": 2,
+    "name": "鈴木花子",
+    "email": "suzuki@example.com",
+    "phone": "090-8765-4321"
+  }
+]
+```
+
+### GET `/api/persons/{id}` - 名簿詳細取得
+
+| ステータスコード | 説明 |
+|-----------------|------|
+| 200 OK | 取得成功 |
+| 400 Bad Request | IDが無効（数値でない） |
+| 404 Not Found | 指定されたIDの名簿が存在しない |
+| 500 Internal Server Error | データベースエラー |
+
+**成功レスポンス例 (200):**
+```json
+{
+  "id": 1,
+  "name": "山田太郎",
+  "email": "yamada@example.com",
+  "phone": "090-1234-5678"
+}
+```
+
+**エラーレスポンス例 (400):**
+```
+Invalid ID
+```
+
+**エラーレスポンス例 (404):**
+```
+Person not found
+```
+
+### POST `/api/persons` - 名簿登録
+
+| ステータスコード | 説明 |
+|-----------------|------|
+| 201 Created | 登録成功 |
+| 400 Bad Request | リクエストボディが無効、または名前が未入力 |
+| 500 Internal Server Error | データベースエラー |
+
+**リクエスト例:**
+```json
+{
+  "name": "田中一郎",
+  "email": "tanaka@example.com",
+  "phone": "090-1111-2222"
+}
+```
+
+**成功レスポンス例 (201):**
+```json
+{
+  "id": 3,
+  "name": "田中一郎",
+  "email": "tanaka@example.com",
+  "phone": "090-1111-2222"
+}
+```
+
+**エラーレスポンス例 (400):**
+```
+Invalid request body
+```
+または
+```
+Name is required
+```
+
+### PUT `/api/persons/{id}` - 名簿更新
+
+| ステータスコード | 説明 |
+|-----------------|------|
+| 200 OK | 更新成功 |
+| 400 Bad Request | IDが無効、リクエストボディが無効、または名前が未入力 |
+| 404 Not Found | 指定されたIDの名簿が存在しない |
+| 500 Internal Server Error | データベースエラー |
+
+**リクエスト例:**
+```json
+{
+  "name": "田中一郎（更新）",
+  "email": "tanaka-new@example.com",
+  "phone": "090-3333-4444"
+}
+```
+
+**成功レスポンス例 (200):**
+```json
+{
+  "id": 3,
+  "name": "田中一郎（更新）",
+  "email": "tanaka-new@example.com",
+  "phone": "090-3333-4444"
+}
+```
+
+**エラーレスポンス例 (404):**
+```
+Person not found
+```
+
+### DELETE `/api/persons/{id}` - 名簿削除
+
+| ステータスコード | 説明 |
+|-----------------|------|
+| 204 No Content | 削除成功（レスポンスボディなし） |
+| 400 Bad Request | IDが無効（数値でない） |
+| 404 Not Found | 指定されたIDの名簿が存在しない |
+| 500 Internal Server Error | データベースエラー |
 
 ## データベース
 
-### tasksテーブル
+### personsテーブル
 
 | カラム | 型 | 説明 |
 |--------|-----|------|
 | id | INT | 主キー (AUTO_INCREMENT) |
-| task | VARCHAR(255) | タスク内容 |
-| limit_date | DATE | 期限日 |
-| status | VARCHAR(20) | ステータス (pending/completed) |
-| created_at | DATETIME | 作成日時 |
-| updated_at | DATETIME | 更新日時 |
+| name | VARCHAR(255) | 名前（必須） |
+| email | VARCHAR(255) | メールアドレス |
+| phone | VARCHAR(50) | 電話番号 |
+| created_at | TIMESTAMP | 作成日時 |
+| updated_at | TIMESTAMP | 更新日時 |
 
 ## 環境変数
 
-| 変数名 | デフォルト値 | 説明 |
-|--------|-------------|------|
-| DB_HOST | localhost | MySQLホスト |
-| DB_PORT | 3306 | MySQLポート |
-| DB_USER | root | MySQLユーザー |
-| DB_PASSWORD | password | MySQLパスワード |
-| DB_NAME | taskdb | データベース名 |
+| 変数名 | 必須 | 説明 |
+|--------|-----|------|
+| DB_HOST | ○ | MySQLホスト（RDSエンドポイント） |
+| DB_USER | ○ | MySQLユーザー |
+| DB_PASSWORD | ○ | MySQLパスワード |
+| DB_NAME | ○ | データベース名（meibo） |
 
 ## ローカル開発
 
@@ -55,7 +204,7 @@ Go言語で実装されたタスク管理APIサーバーです。
 1. データベースを作成
 
 ```sql
-CREATE DATABASE taskdb;
+CREATE DATABASE meibo;
 ```
 
 2. 依存関係をインストール
@@ -68,45 +217,53 @@ go mod tidy
 
 ```bash
 export DB_HOST=localhost
+export DB_USER=root
 export DB_PASSWORD=yourpassword
+export DB_NAME=meibo
 go run main.go
 ```
 
-サーバーが `http://localhost:8080` で起動します。
+サーバーが `http://localhost:80` で起動します。
 
 ### ビルド
 
 ```bash
-go build -o task-api main.go
-./task-api
+go build -o meibo-api main.go
+./meibo-api
 ```
 
 ## APIの使用例
 
-### タスク作成
+### 名簿登録
 
 ```bash
-curl -X POST http://localhost:8080/api/tasks \
+curl -X POST http://localhost/api/persons \
   -H "Content-Type: application/json" \
-  -d '{"task": "Buy groceries", "limit_date": "2024-12-31"}'
+  -d '{"name": "山田太郎", "email": "yamada@example.com", "phone": "090-1234-5678"}'
 ```
 
-### タスク一覧取得
+### 名簿一覧取得
 
 ```bash
-curl http://localhost:8080/api/tasks
+curl http://localhost/api/persons
 ```
 
-### タスク更新
+### 名簿詳細取得
 
 ```bash
-curl -X PUT http://localhost:8080/api/tasks/1 \
+curl http://localhost/api/persons/1
+```
+
+### 名簿更新
+
+```bash
+curl -X PUT http://localhost/api/persons/1 \
   -H "Content-Type: application/json" \
-  -d '{"task": "Buy groceries", "limit_date": "2024-12-31", "status": "completed"}'
+  -d '{"name": "山田太郎（更新）", "email": "yamada-new@example.com", "phone": "090-9999-0000"}'
 ```
 
-### タスク削除
+### 名簿削除
 
 ```bash
-curl -X DELETE http://localhost:8080/api/tasks/1
+curl -X DELETE http://localhost/api/persons/1
 ```
